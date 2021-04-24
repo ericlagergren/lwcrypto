@@ -15,7 +15,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 1
 	// Round constant
-	XORQ $0xf0, BX
+	XORQ $0x000000f0, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -90,7 +90,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 2
 	// Round constant
-	XORQ $0xe1, BX
+	XORQ $0x000000e1, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -165,7 +165,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 3
 	// Round constant
-	XORQ $0xd2, BX
+	XORQ $0x000000d2, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -240,7 +240,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 4
 	// Round constant
-	XORQ $0xc3, BX
+	XORQ $0x000000c3, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -315,7 +315,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 5
 	// Round constant
-	XORQ $0xb4, BX
+	XORQ $0x000000b4, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -390,7 +390,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 6
 	// Round constant
-	XORQ $0xa5, BX
+	XORQ $0x000000a5, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -465,7 +465,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 7
 	// Round constant
-	XORQ $0x96, BX
+	XORQ $0x00000096, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -540,7 +540,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 8
 	// Round constant
-	XORQ $0x87, BX
+	XORQ $0x00000087, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -615,7 +615,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 9
 	// Round constant
-	XORQ $0x78, BX
+	XORQ $0x00000078, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -690,7 +690,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 10
 	// Round constant
-	XORQ $0x69, BX
+	XORQ $0x00000069, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -765,7 +765,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 11
 	// Round constant
-	XORQ $0x5a, BX
+	XORQ $0x0000005a, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -840,7 +840,7 @@ TEXT ·p12(SB), NOSPLIT, $0-8
 
 	// Start round 12
 	// Round constant
-	XORQ $0x4b, BX
+	XORQ $0x0000004b, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -931,7 +931,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 1
 	// Round constant
-	XORQ $0xb4, BX
+	XORQ $0x000000b4, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1006,7 +1006,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 2
 	// Round constant
-	XORQ $0xa5, BX
+	XORQ $0x000000a5, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1081,7 +1081,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 3
 	// Round constant
-	XORQ $0x96, BX
+	XORQ $0x00000096, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1156,7 +1156,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 4
 	// Round constant
-	XORQ $0x87, BX
+	XORQ $0x00000087, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1231,7 +1231,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 5
 	// Round constant
-	XORQ $0x78, BX
+	XORQ $0x00000078, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1306,7 +1306,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 6
 	// Round constant
-	XORQ $0x69, BX
+	XORQ $0x00000069, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1381,7 +1381,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 7
 	// Round constant
-	XORQ $0x5a, BX
+	XORQ $0x0000005a, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1456,7 +1456,7 @@ TEXT ·p8(SB), NOSPLIT, $0-8
 
 	// Start round 8
 	// Round constant
-	XORQ $0x4b, BX
+	XORQ $0x0000004b, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1547,7 +1547,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 1
 	// Round constant
-	XORQ $0x96, BX
+	XORQ $0x00000096, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1622,7 +1622,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 2
 	// Round constant
-	XORQ $0x87, BX
+	XORQ $0x00000087, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1697,7 +1697,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 3
 	// Round constant
-	XORQ $0x78, BX
+	XORQ $0x00000078, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1772,7 +1772,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 4
 	// Round constant
-	XORQ $0x69, BX
+	XORQ $0x00000069, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1847,7 +1847,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 5
 	// Round constant
-	XORQ $0x5a, BX
+	XORQ $0x0000005a, BX
 
 	// Substitution
 	XORQ DI, CX
@@ -1922,7 +1922,7 @@ TEXT ·p6(SB), NOSPLIT, $0-8
 
 	// Start round 6
 	// Round constant
-	XORQ $0x4b, BX
+	XORQ $0x0000004b, BX
 
 	// Substitution
 	XORQ DI, CX
