@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	. "github.com/mmcloughlin/avo/build"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
@@ -23,7 +21,7 @@ func main() {
 func declarePermute() {
 	for _, v := range []struct {
 		name string
-		rc   []int
+		rc   []uint32
 	}{
 		{"p12", p12},
 		{"p8", p8},
@@ -72,22 +70,22 @@ func storeState(s state, m Mem) {
 }
 
 var (
-	p12 = []int{
+	p12 = []uint32{
 		0xf0, 0xe1, 0xd2, 0xc3,
 		0xb4, 0xa5, 0x96, 0x87,
 		0x78, 0x69, 0x5a, 0x4b,
 	}
-	p8 = []int{
+	p8 = []uint32{
 		0xb4, 0xa5, 0x96, 0x87,
 		0x78, 0x69, 0x5a, 0x4b,
 	}
-	p6 = []int{0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}
+	p6 = []uint32{0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b}
 )
 
-func permute(rc []int, s state) {
+func permute(rc []uint32, s state) {
 	for i, C := range rc {
 		Commentf("Start round %d", i+1)
-		round(s, C)
+		round(s, U32(C))
 		Commentf("End round %d\n", i+1)
 	}
 }
@@ -95,16 +93,7 @@ func permute(rc []int, s state) {
 // round outputs the ASCON round function.
 //
 // C must be either a Register or int.
-func round(s state, C interface{}) {
-	switch t := C.(type) {
-	case Register:
-		// OK
-	case int:
-		C = U32(uint32(t))
-	default:
-		panic(fmt.Sprintf("unknown type: %T", C))
-	}
-
+func round(s state, C Op) {
 	Comment("Round constant")
 	XORQ(C.(Op), s[2])
 
