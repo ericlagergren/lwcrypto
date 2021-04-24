@@ -10,7 +10,6 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"math/bits"
 	"strconv"
 
@@ -21,8 +20,8 @@ var errOpen = errors.New("ascon: message authentication failed")
 
 // New128a creates a 128-bit ASCON-128a AEAD.
 func New128a(key []byte) (cipher.AEAD, error) {
-	if len(key) != keySize {
-		return nil, fmt.Errorf("invalid key size: %d", len(key))
+	if len(key) != KeySize {
+		return nil, errors.New("ascon: bad key length")
 	}
 	return &ascon{
 		k0: binary.BigEndian.Uint64(key[0:8]),
@@ -31,12 +30,15 @@ func New128a(key []byte) (cipher.AEAD, error) {
 }
 
 const (
-	// BlockSize is the ASCON-128a block size in bytes.
+	// BlockSize is the size in bytes of an ASCON-128a block.
 	BlockSize = 128 / 8
-
-	keySize   = 128 / 8
-	nonceSize = 128 / 8
-	tagSize   = 128 / 8
+	// KeySize is the size in bytes of an ASCON-128a key.
+	KeySize = 128 / 8
+	// NonceSize is the size in bytes of an ASCON-128a nonce.
+	NonceSize = 128 / 8
+	// TagSize is the size in bytes of an ASCON-128a
+	// authenticator.
+	TagSize = 128 / 8
 )
 
 type ascon struct {
@@ -46,15 +48,15 @@ type ascon struct {
 var _ cipher.AEAD = (*ascon)(nil)
 
 func (a *ascon) NonceSize() int {
-	return nonceSize
+	return NonceSize
 }
 
 func (a *ascon) Overhead() int {
-	return tagSize
+	return TagSize
 }
 
 func (a *ascon) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
-	if len(nonce) != nonceSize {
+	if len(nonce) != NonceSize {
 		panic("ascon: incorrect nonce length: " + strconv.Itoa(len(nonce)))
 	}
 	// TODO(eric): ciphertext max length
@@ -66,29 +68,29 @@ func (a *ascon) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	s.init(a.k0, a.k1, n0, n1)
 	s.additionalData(additionalData)
 
-	ret, out := subtle.SliceForAppend(dst, len(plaintext)+tagSize)
+	ret, out := subtle.SliceForAppend(dst, len(plaintext)+TagSize)
 	if subtle.InexactOverlap(out, plaintext) {
 		panic("ascon: invalid buffer overlap")
 	}
 	s.encrypt(out[:len(plaintext)], plaintext)
 
 	s.finalize(a.k0, a.k1)
-	s.tag(out[len(out)-tagSize:])
+	s.tag(out[len(out)-TagSize:])
 
 	return ret
 }
 
 func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, error) {
-	if len(nonce) != nonceSize {
+	if len(nonce) != NonceSize {
 		panic("ascon: incorrect nonce length: " + strconv.Itoa(len(nonce)))
 	}
-	if len(ciphertext) < tagSize {
+	if len(ciphertext) < TagSize {
 		return nil, errOpen
 	}
 	// TODO(eric): ciphertext max length
 
-	tag := ciphertext[len(ciphertext)-tagSize:]
-	ciphertext = ciphertext[:len(ciphertext)-tagSize]
+	tag := ciphertext[len(ciphertext)-TagSize:]
+	ciphertext = ciphertext[:len(ciphertext)-TagSize]
 
 	n0 := binary.BigEndian.Uint64(nonce[0:8])
 	n1 := binary.BigEndian.Uint64(nonce[8:16])
@@ -105,7 +107,7 @@ func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, err
 
 	s.finalize(a.k0, a.k1)
 
-	expectedTag := make([]byte, tagSize)
+	expectedTag := make([]byte, TagSize)
 	s.tag(expectedTag)
 
 	if subtle.ConstantTimeCompare(expectedTag, tag) != 1 {
