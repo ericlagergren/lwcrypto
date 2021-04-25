@@ -6,11 +6,11 @@ import (
 	. "github.com/mmcloughlin/avo/reg"
 )
 
-//go:generate go run asm.go -out ../ascon.s -stubs ../stub.go -pkg ascon
+//go:generate go run asm.go -out ../ascon_amd64.s -stubs ../stub_amd64.go -pkg ascon
 
 func main() {
 	Package("github.com/ericlagergren/lwcrypto/ascon")
-	ConstraintExpr("amd64,gc,!purego")
+	ConstraintExpr("gc,!purego")
 
 	declarePermute()
 	declareRound()
@@ -95,7 +95,7 @@ func permute(rc []uint32, s state) {
 // C must be either a Register or int.
 func round(s state, C Op) {
 	Comment("Round constant")
-	XORQ(C.(Op), s[2])
+	XORQ(C, s[2])
 
 	Comment("Substitution")
 	XORQ(s[4], s[0]) // s[0] ^= s[4]

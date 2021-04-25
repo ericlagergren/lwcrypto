@@ -18,7 +18,49 @@ import (
 
 var errOpen = errors.New("ascon: message authentication failed")
 
+// New128 creates a 128-bit ASCON-128 AEAD.
+//
+// ASCON-128 provides lower throughput but increased robustness
+// compared to ASCON-128a. In particular, ASCON-128 is protected
+// against forgeries and key recovery attacks with a complexity
+// of 2^96.
+//
+// Each unique key can encrypt a maximum 2^68 bytes (i.e., 2^64
+// plaintext and associated data blocks). Nonces must never be
+// reused with the same key. Violating either of these
+// constraints compromises the security of the algorithm.
+//
+// There are no other constraints on the composition of the
+// nonce. For example, the nonce can be a counter.
+//
+// Refer to ASCON's documentation for more information.
+func New128(key []byte) (cipher.AEAD, error) {
+	if len(key) != KeySize {
+		return nil, errors.New("ascon: bad key length")
+	}
+	return &ascon{
+		k0: binary.BigEndian.Uint64(key[0:8]),
+		k1: binary.BigEndian.Uint64(key[8:16]),
+		iv: iv128,
+	}, nil
+}
+
 // New128a creates a 128-bit ASCON-128a AEAD.
+//
+// ASCON-128a provides higher throughput but reduced robustness
+// compared to ASCON-128. In particular, ASCON-128a is protected
+// against forgeries and key recovery attacks with a complexity
+// of 2^128.
+//
+// Each unique key can encrypt a maximum 2^68 bytes (i.e., 2^64
+// plaintext and associated data blocks). Nonces must never be
+// reused with the same key. Violating either of these
+// constraints compromises the security of the algorithm.
+//
+// There are no other constraints on the composition of the
+// nonce. For example, the nonce can be a counter.
+//
+// Refer to ASCON's documentation for more information.
 func New128a(key []byte) (cipher.AEAD, error) {
 	if len(key) != KeySize {
 		return nil, errors.New("ascon: bad key length")
@@ -26,23 +68,29 @@ func New128a(key []byte) (cipher.AEAD, error) {
 	return &ascon{
 		k0: binary.BigEndian.Uint64(key[0:8]),
 		k1: binary.BigEndian.Uint64(key[8:16]),
+		iv: iv128a,
 	}, nil
 }
 
 const (
-	// BlockSize is the size in bytes of an ASCON-128a block.
-	BlockSize = 128 / 8
-	// KeySize is the size in bytes of an ASCON-128a key.
+	// BlockSize128a is the size in bytes of an ASCON-128a block.
+	BlockSize128a = 128 / 8
+	// BlockSize128 is the size in bytes of an ASCON-128 block.
+	BlockSize128 = 64 / 8
+	// KeySize is the size in bytes of ASCON-128 and ASCON-128a
+	// keys.
 	KeySize = 128 / 8
-	// NonceSize is the size in bytes of an ASCON-128a nonce.
+	// NonceSize is the size in bytes of ASCON-128 and ASCON-128a
+	// nonces.
 	NonceSize = 128 / 8
-	// TagSize is the size in bytes of an ASCON-128a
-	// authenticator.
+	// TagSize is the size in bytes of ASCON-128 and ASCON-128a
+	// authenticators.
 	TagSize = 128 / 8
 )
 
 type ascon struct {
 	k0, k1 uint64
+	iv     uint64
 }
 
 var _ cipher.AEAD = (*ascon)(nil)
@@ -59,22 +107,35 @@ func (a *ascon) Seal(dst, nonce, plaintext, additionalData []byte) []byte {
 	if len(nonce) != NonceSize {
 		panic("ascon: incorrect nonce length: " + strconv.Itoa(len(nonce)))
 	}
-	// TODO(eric): ciphertext max length
+	// TODO(eric): ciphertext max length?
 
 	n0 := binary.BigEndian.Uint64(nonce[0:8])
 	n1 := binary.BigEndian.Uint64(nonce[8:16])
 
 	var s state
-	s.init(a.k0, a.k1, n0, n1)
-	s.additionalData(additionalData)
+	s.init(a.iv, a.k0, a.k1, n0, n1)
+
+	if a.iv == iv128a {
+		s.additionalData128a(additionalData)
+	} else {
+		s.additionalData128(additionalData)
+	}
 
 	ret, out := subtle.SliceForAppend(dst, len(plaintext)+TagSize)
 	if subtle.InexactOverlap(out, plaintext) {
 		panic("ascon: invalid buffer overlap")
 	}
-	s.encrypt(out[:len(plaintext)], plaintext)
+	if a.iv == iv128a {
+		s.encrypt128a(out[:len(plaintext)], plaintext)
+	} else {
+		s.encrypt128(out[:len(plaintext)], plaintext)
+	}
 
-	s.finalize(a.k0, a.k1)
+	if a.iv == iv128a {
+		s.finalize128a(a.k0, a.k1)
+	} else {
+		s.finalize128(a.k0, a.k1)
+	}
 	s.tag(out[len(out)-TagSize:])
 
 	return ret
@@ -87,7 +148,7 @@ func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, err
 	if len(ciphertext) < TagSize {
 		return nil, errOpen
 	}
-	// TODO(eric): ciphertext max length
+	// TODO(eric): ciphertext max length?
 
 	tag := ciphertext[len(ciphertext)-TagSize:]
 	ciphertext = ciphertext[:len(ciphertext)-TagSize]
@@ -96,16 +157,29 @@ func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, err
 	n1 := binary.BigEndian.Uint64(nonce[8:16])
 
 	var s state
-	s.init(a.k0, a.k1, n0, n1)
-	s.additionalData(additionalData)
+	s.init(a.iv, a.k0, a.k1, n0, n1)
+
+	if a.iv == iv128a {
+		s.additionalData128a(additionalData)
+	} else {
+		s.additionalData128(additionalData)
+	}
 
 	ret, out := subtle.SliceForAppend(dst, len(ciphertext))
 	if subtle.InexactOverlap(out, ciphertext) {
 		panic("ascon: invalid buffer overlap")
 	}
-	s.decrypt(out, ciphertext)
+	if a.iv == iv128a {
+		s.decrypt128a(out, ciphertext)
+	} else {
+		s.decrypt128(out, ciphertext)
+	}
 
-	s.finalize(a.k0, a.k1)
+	if a.iv == iv128a {
+		s.finalize128a(a.k0, a.k1)
+	} else {
+		s.finalize128(a.k0, a.k1)
+	}
 
 	expectedTag := make([]byte, TagSize)
 	s.tag(expectedTag)
@@ -120,6 +194,7 @@ func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, err
 }
 
 const (
+	iv128  uint64 = 0x80400c0600000000 // Ascon-128
 	iv128a uint64 = 0x80800c0800000000 // Ascon-128a
 )
 
@@ -127,8 +202,8 @@ type state struct {
 	x0, x1, x2, x3, x4 uint64
 }
 
-func (s *state) init(k0, k1, n0, n1 uint64) {
-	s.x0 = iv128a
+func (s *state) init(iv, k0, k1, n0, n1 uint64) {
+	s.x0 = iv
 	s.x1 = k0
 	s.x2 = k1
 	s.x3 = n0
@@ -138,7 +213,7 @@ func (s *state) init(k0, k1, n0, n1 uint64) {
 	s.x4 ^= k1
 }
 
-func (s *state) finalize(k0, k1 uint64) {
+func (s *state) finalize128a(k0, k1 uint64) {
 	s.x2 ^= k0
 	s.x3 ^= k1
 	p12(s)
@@ -146,13 +221,13 @@ func (s *state) finalize(k0, k1 uint64) {
 	s.x4 ^= k1
 }
 
-func (s *state) additionalData(ad []byte) {
+func (s *state) additionalData128a(ad []byte) {
 	if len(ad) > 0 {
-		for len(ad) >= BlockSize {
+		for len(ad) >= BlockSize128a {
 			s.x0 ^= binary.BigEndian.Uint64(ad[0:8])
 			s.x1 ^= binary.BigEndian.Uint64(ad[8:16])
 			p8(s)
-			ad = ad[BlockSize:]
+			ad = ad[BlockSize128a:]
 		}
 		if len(ad) >= 8 {
 			s.x0 ^= binary.BigEndian.Uint64(ad[0:8])
@@ -167,19 +242,15 @@ func (s *state) additionalData(ad []byte) {
 	s.x4 ^= 1
 }
 
-func pad(n int) uint64 {
-	return 0x80 << (56 - 8*n)
-}
-
-func (s *state) encrypt(dst, src []byte) {
-	for len(src) >= BlockSize {
+func (s *state) encrypt128a(dst, src []byte) {
+	for len(src) >= BlockSize128a {
 		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
 		s.x1 ^= binary.BigEndian.Uint64(src[8:16])
 		binary.BigEndian.PutUint64(dst[0:8], s.x0)
 		binary.BigEndian.PutUint64(dst[8:16], s.x1)
 		p8(s)
-		src = src[BlockSize:]
-		dst = dst[BlockSize:]
+		src = src[BlockSize128a:]
+		dst = dst[BlockSize128a:]
 	}
 	if len(src) >= 8 {
 		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
@@ -189,13 +260,13 @@ func (s *state) encrypt(dst, src []byte) {
 		put64n(dst[8:], s.x1)
 	} else {
 		s.x0 ^= be64n(src)
-		s.x0 ^= pad(len(src))
 		put64n(dst, s.x0)
+		s.x0 ^= pad(len(src))
 	}
 }
 
-func (s *state) decrypt(dst, src []byte) {
-	for len(src) >= BlockSize {
+func (s *state) decrypt128a(dst, src []byte) {
+	for len(src) >= BlockSize128a {
 		c0 := binary.BigEndian.Uint64(src[0:8])
 		c1 := binary.BigEndian.Uint64(src[8:16])
 		binary.BigEndian.PutUint64(dst[0:8], s.x0^c0)
@@ -203,8 +274,8 @@ func (s *state) decrypt(dst, src []byte) {
 		s.x0 = c0
 		s.x1 = c1
 		p8(s)
-		src = src[BlockSize:]
-		dst = dst[BlockSize:]
+		src = src[BlockSize128a:]
+		dst = dst[BlockSize128a:]
 	}
 	if len(src) >= 8 {
 		c0 := binary.BigEndian.Uint64(src[0:8])
@@ -224,9 +295,64 @@ func (s *state) decrypt(dst, src []byte) {
 	}
 }
 
+func (s *state) finalize128(k0, k1 uint64) {
+	s.x1 ^= k0
+	s.x2 ^= k1
+	p12(s)
+	s.x3 ^= k0
+	s.x4 ^= k1
+}
+
+func (s *state) additionalData128(ad []byte) {
+	if len(ad) > 0 {
+		for len(ad) >= BlockSize128 {
+			s.x0 ^= binary.BigEndian.Uint64(ad[0:8])
+			p6(s)
+			ad = ad[BlockSize128:]
+		}
+		s.x0 ^= be64n(ad)
+		s.x0 ^= pad(len(ad))
+		p6(s)
+	}
+	s.x4 ^= 1
+}
+
+func (s *state) encrypt128(dst, src []byte) {
+	for len(src) >= BlockSize128 {
+		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
+		binary.BigEndian.PutUint64(dst[0:8], s.x0)
+		p6(s)
+		src = src[BlockSize128:]
+		dst = dst[BlockSize128:]
+	}
+	s.x0 ^= be64n(src)
+	put64n(dst, s.x0)
+	s.x0 ^= pad(len(src))
+}
+
+func (s *state) decrypt128(dst, src []byte) {
+	for len(src) >= BlockSize128 {
+		c := binary.BigEndian.Uint64(src[0:8])
+		binary.BigEndian.PutUint64(dst[0:8], s.x0^c)
+		s.x0 = c
+		p6(s)
+		src = src[BlockSize128:]
+		dst = dst[BlockSize128:]
+	}
+	c := be64n(src)
+	put64n(dst, s.x0^c)
+	s.x0 = mask(s.x0, len(src))
+	s.x0 |= c
+	s.x0 ^= pad(len(src))
+}
+
 func (s *state) tag(dst []byte) {
 	binary.BigEndian.PutUint64(dst[0:8], s.x3)
 	binary.BigEndian.PutUint64(dst[8:16], s.x4)
+}
+
+func pad(n int) uint64 {
+	return 0x80 << (56 - 8*n)
 }
 
 func p12Generic(s *state) {
@@ -326,7 +452,7 @@ func put64n(b []byte, x uint64) {
 
 func mask(x uint64, n int) uint64 {
 	for i := 0; i < n; i++ {
-		x &^= 0xff << (56 - 8*i)
+		x &^= 255 << (56 - 8*i)
 	}
 	return x
 }

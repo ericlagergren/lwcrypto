@@ -3,6 +3,7 @@ package ascon
 import (
 	"bufio"
 	"bytes"
+	"crypto/cipher"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -68,13 +69,21 @@ func TestPermute(t *testing.T) {
 	}
 }
 
-func TestVectors(t *testing.T) {
-	vecs, err := readVecs(filepath.Join("testdata", "vectors.txt"))
+func TestVectors128(t *testing.T) {
+	testVectors(t, New128, filepath.Join("testdata", "vectors_128.txt"))
+}
+
+func TestVectors128a(t *testing.T) {
+	testVectors(t, New128a, filepath.Join("testdata", "vectors_128a.txt"))
+}
+
+func testVectors(t *testing.T, fn func([]byte) (cipher.AEAD, error), path string) {
+	vecs, err := readVecs(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i, v := range vecs {
-		c, err := New128a(v.key)
+		c, err := fn(v.key)
 		if err != nil {
 			t.Fatalf("#%d: %v", i+1, err)
 		}
@@ -92,29 +101,48 @@ func TestVectors(t *testing.T) {
 	}
 }
 
-func BenchmarkSeal1K(b *testing.B) {
-	benchmarkSeal(b, make([]byte, 1024))
+func BenchmarkSeal1K_128a(b *testing.B) {
+	benchmarkSeal(b, New128a, make([]byte, 1024))
 }
 
-func BenchmarkOpen1K(b *testing.B) {
-	benchmarkOpen(b, make([]byte, 1024))
+func BenchmarkOpen1K_128a(b *testing.B) {
+	benchmarkOpen(b, New128a, make([]byte, 1024))
 }
 
-func BenchmarkSeal8K(b *testing.B) {
-	benchmarkSeal(b, make([]byte, 8*1024))
+func BenchmarkSeal8K_128a(b *testing.B) {
+	benchmarkSeal(b, New128a, make([]byte, 8*1024))
 }
 
-func BenchmarkOpen8K(b *testing.B) {
-	benchmarkOpen(b, make([]byte, 8*1024))
+func BenchmarkOpen8K_128a(b *testing.B) {
+	benchmarkOpen(b, New128a, make([]byte, 8*1024))
 }
 
-func benchmarkSeal(b *testing.B, buf []byte) {
+func BenchmarkSeal1K_128(b *testing.B) {
+	benchmarkSeal(b, New128, make([]byte, 1024))
+}
+
+func BenchmarkOpen1K_128(b *testing.B) {
+	benchmarkOpen(b, New128, make([]byte, 1024))
+}
+
+func BenchmarkSeal8K_128(b *testing.B) {
+	benchmarkSeal(b, New128, make([]byte, 8*1024))
+}
+
+func BenchmarkOpen8K_128(b *testing.B) {
+	benchmarkOpen(b, New128, make([]byte, 8*1024))
+}
+
+func benchmarkSeal(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byte) {
 	b.SetBytes(int64(len(buf)))
 
 	key := make([]byte, 16)
 	nonce := make([]byte, 16)
 	ad := make([]byte, 13)
-	aead, _ := New128a(key)
+	aead, err := fn(key)
+	if err != nil {
+		b.Fatal(err)
+	}
 	var out []byte
 
 	b.ResetTimer()
@@ -123,13 +151,16 @@ func benchmarkSeal(b *testing.B, buf []byte) {
 	}
 }
 
-func benchmarkOpen(b *testing.B, buf []byte) {
+func benchmarkOpen(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byte) {
 	b.SetBytes(int64(len(buf)))
 
 	key := make([]byte, 16)
 	nonce := make([]byte, 16)
 	ad := make([]byte, 13)
-	aead, _ := New128a(key)
+	aead, err := fn(key)
+	if err != nil {
+		b.Fatal(err)
+	}
 	var out []byte
 	out = aead.Seal(out[:0], nonce, buf, ad)
 
