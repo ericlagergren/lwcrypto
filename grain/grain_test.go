@@ -1,4 +1,4 @@
-package ascon
+package grain
 
 import (
 	"bufio"
@@ -6,75 +6,97 @@ import (
 	"crypto/cipher"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
-	"testing/quick"
 )
 
-func randState(rng *rand.Rand) state {
-	v, ok := quick.Value(reflect.TypeOf([5]uint64{}), rng)
-	if !ok {
-		panic("got false")
-	}
-	x := v.Interface().([5]uint64)
-	return state{
-		x0: x[0],
-		x1: x[1],
-		x2: x[2],
-		x3: x[3],
-		x4: x[4],
-	}
-}
+func TestNext(t *testing.T) {
+	key := make([]byte, KeySize)
+	nonce := make([]byte, NonceSize)
+	for i := 0; i < 1_000; i++ {
+		if _, err := rand.Read(key); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := rand.Read(nonce); err != nil {
+			t.Fatal(err)
+		}
 
-func TestRound(t *testing.T) {
-	rng := rand.New(rand.NewSource(0xDEADBEEF))
-	for i := 0; i < 1000; i++ {
-		s := randState(rng)
-		want, got := s, s
-		C := uint64(i)
-		roundGeneric(&want, C)
-		round(&got, C)
-		if want != got {
-			t.Fatalf("expected %v, got %v", want, got)
+		var g1 state
+		g1.setKey(key)
+		g1.init(nonce)
+
+		var g2 state
+		g2.setKey(key)
+		g2.init(nonce)
+
+		for j := 0; j < 10_000; j++ {
+			v1 := nextGeneric(&g1)
+			v2 := next(&g2)
+			if v1 != v2 {
+				if g1 != g2 {
+					fmt.Println("mismatch")
+					fmt.Println(g1.lfsr == g2.lfsr)
+					for i := range g1.lfsr {
+						if g1.lfsr[i] != g2.lfsr[i] {
+							fmt.Printf("mismatch %#x vs %#x at %d\n",
+								g1.lfsr[i], g2.lfsr[i], i)
+						}
+					}
+					fmt.Println(g1.nfsr == g2.nfsr)
+					for i := range g1.nfsr {
+						if g1.nfsr[i] != g2.nfsr[i] {
+							fmt.Printf("mismatch %#x vs %#x at %d\n",
+								g1.nfsr[i], g2.nfsr[i], i)
+						}
+					}
+				}
+				t.Fatalf("#%d (#%d): expected %#x, got %#x", i, j, v1, v2)
+			}
 		}
 	}
 }
 
-func TestPermute(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		fn        func(*state)
-		fnGeneric func(*state)
-	}{
-		{"p12", p12, p12Generic},
-		{"p8", p8, p8Generic},
-		{"p6", p6, p6Generic},
-	} {
-		rng := rand.New(rand.NewSource(0xDEADBEEF))
-		t.Run(tc.name, func(t *testing.T) {
-			for i := 0; i < 1000; i++ {
-				s := randState(rng)
-				want, got := s, s
-				tc.fnGeneric(&want)
-				tc.fn(&got)
-				if want != got {
-					t.Fatalf("#%d: expected %v, got %v", i, want, got)
-				}
+func TestAuth(t *testing.T) {
+	key := make([]byte, KeySize)
+	nonce := make([]byte, NonceSize)
+	for i := 0; i < 256; i++ {
+		if _, err := rand.Read(key); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := rand.Read(nonce); err != nil {
+			t.Fatal(err)
+		}
+
+		var g1 state
+		g1.setKey(key)
+		g1.init(nonce)
+
+		var g2 state
+		g2.setKey(key)
+		g2.init(nonce)
+
+		for j := 0; j < math.MaxUint16; j++ {
+			accumulateGeneric(&g1, uint16(j), uint16(i))
+			accumulate(&g2, uint16(j), uint16(i))
+			if g1.wtf != g2.wtf {
+				t.Fatalf("#%d (#%d): expected %#x, got %#x", i, j, g1.wtf, g2.wtf)
 			}
-		})
+			if g1.acc != g2.acc {
+				t.Fatalf("#%d (#%d): expected %#x, got %#x", i, j, g1.acc, g2.acc)
+			}
+			if g1.reg != g2.reg {
+				t.Fatalf("#%d (#%d): expected %#x, got %#x", i, j, g1.reg, g2.reg)
+			}
+		}
 	}
 }
 
-func TestVectors128(t *testing.T) {
-	testVectors(t, New128, filepath.Join("testdata", "vectors_128.txt"))
-}
-
-func TestVectors128a(t *testing.T) {
-	testVectors(t, New128a, filepath.Join("testdata", "vectors_128a.txt"))
+func TestVectorsLE(t *testing.T) {
+	testVectors(t, New, filepath.Join("testdata", "little_endian.txt"))
 }
 
 func testVectors(t *testing.T, fn func([]byte) (cipher.AEAD, error), path string) {
@@ -101,36 +123,20 @@ func testVectors(t *testing.T, fn func([]byte) (cipher.AEAD, error), path string
 	}
 }
 
-func BenchmarkSeal1K_128a(b *testing.B) {
-	benchmarkSeal(b, New128a, make([]byte, 1024))
+func BenchmarkSeal1K(b *testing.B) {
+	benchmarkSeal(b, New, make([]byte, 1024))
 }
 
-func BenchmarkOpen1K_128a(b *testing.B) {
-	benchmarkOpen(b, New128a, make([]byte, 1024))
+func BenchmarkOpen1K(b *testing.B) {
+	benchmarkOpen(b, New, make([]byte, 1024))
 }
 
-func BenchmarkSeal8K_128a(b *testing.B) {
-	benchmarkSeal(b, New128a, make([]byte, 8*1024))
+func BenchmarkSeal8K(b *testing.B) {
+	benchmarkSeal(b, New, make([]byte, 8*1024))
 }
 
-func BenchmarkOpen8K_128a(b *testing.B) {
-	benchmarkOpen(b, New128a, make([]byte, 8*1024))
-}
-
-func BenchmarkSeal1K_128(b *testing.B) {
-	benchmarkSeal(b, New128, make([]byte, 1024))
-}
-
-func BenchmarkOpen1K_128(b *testing.B) {
-	benchmarkOpen(b, New128, make([]byte, 1024))
-}
-
-func BenchmarkSeal8K_128(b *testing.B) {
-	benchmarkSeal(b, New128, make([]byte, 8*1024))
-}
-
-func BenchmarkOpen8K_128(b *testing.B) {
-	benchmarkOpen(b, New128, make([]byte, 8*1024))
+func BenchmarkOpen8K(b *testing.B) {
+	benchmarkOpen(b, New, make([]byte, 8*1024))
 }
 
 func benchmarkSeal(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byte) {
