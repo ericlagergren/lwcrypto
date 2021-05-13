@@ -136,8 +136,8 @@ func BenchmarkOpen8K_128(b *testing.B) {
 func benchmarkSeal(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byte) {
 	b.SetBytes(int64(len(buf)))
 
-	key := make([]byte, KeySize)
-	nonce := make([]byte, NonceSize)
+	key := make([]byte, 16)
+	nonce := make([]byte, 16)
 	ad := make([]byte, 13)
 	aead, err := fn(key)
 	if err != nil {
@@ -154,8 +154,8 @@ func benchmarkSeal(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byt
 func benchmarkOpen(b *testing.B, fn func([]byte) (cipher.AEAD, error), buf []byte) {
 	b.SetBytes(int64(len(buf)))
 
-	key := make([]byte, KeySize)
-	nonce := make([]byte, NonceSize)
+	key := make([]byte, 16)
+	nonce := make([]byte, 16)
 	ad := make([]byte, 13)
 	aead, err := fn(key)
 	if err != nil {

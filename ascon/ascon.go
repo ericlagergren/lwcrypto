@@ -11,36 +11,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"math/bits"
-	"runtime"
 	"strconv"
 
 	"github.com/ericlagergren/lwcrypto/internal/subtle"
 )
 
 var errOpen = errors.New("ascon: message authentication failed")
-
-const (
-	// BlockSize128a is the size in bytes of an ASCON-128a block.
-	BlockSize128a = 128 / 8
-	// BlockSize128 is the size in bytes of an ASCON-128 block.
-	BlockSize128 = 64 / 8
-	// KeySize is the size in bytes of ASCON-128 and ASCON-128a
-	// keys.
-	KeySize = 128 / 8
-	// NonceSize is the size in bytes of ASCON-128 and ASCON-128a
-	// nonces.
-	NonceSize = 128 / 8
-	// TagSize is the size in bytes of ASCON-128 and ASCON-128a
-	// authenticators.
-	TagSize = 128 / 8
-)
-
-type ascon struct {
-	k0, k1 uint64
-	iv     uint64
-}
-
-var _ cipher.AEAD = (*ascon)(nil)
 
 // New128 creates a 128-bit ASCON-128 AEAD.
 //
@@ -95,6 +71,29 @@ func New128a(key []byte) (cipher.AEAD, error) {
 		iv: iv128a,
 	}, nil
 }
+
+const (
+	// BlockSize128a is the size in bytes of an ASCON-128a block.
+	BlockSize128a = 128 / 8
+	// BlockSize128 is the size in bytes of an ASCON-128 block.
+	BlockSize128 = 64 / 8
+	// KeySize is the size in bytes of ASCON-128 and ASCON-128a
+	// keys.
+	KeySize = 128 / 8
+	// NonceSize is the size in bytes of ASCON-128 and ASCON-128a
+	// nonces.
+	NonceSize = 128 / 8
+	// TagSize is the size in bytes of ASCON-128 and ASCON-128a
+	// authenticators.
+	TagSize = 128 / 8
+)
+
+type ascon struct {
+	k0, k1 uint64
+	iv     uint64
+}
+
+var _ cipher.AEAD = (*ascon)(nil)
 
 func (a *ascon) NonceSize() int {
 	return NonceSize
@@ -189,7 +188,6 @@ func (a *ascon) Open(dst, nonce, ciphertext, additionalData []byte) ([]byte, err
 		for i := range out {
 			out[i] = 0
 		}
-		runtime.KeepAlive(out)
 		return nil, errOpen
 	}
 	return ret, nil
