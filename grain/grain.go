@@ -477,47 +477,34 @@ func accumulateGeneric(reg, acc uint64, ms, pt uint16) (reg1, acc1 uint64) {
 	// function to be inlined. However, even though it's inlined
 	// it's only ever called via accumulate, which can't be
 	// inlined because the combined inlining costs exceed the
-	// allowed budget. On a 2019 MBP (i7 @ 2.6Ghz)
-	// accumulateGeneric runs at about 115 MB/s.
-	acctmp := uint16(0)
+	// allowed budget.
+	var acctmp uint16
 	regtmp := uint32(ms) << 16
 	for i := 0; i < 16; i++ {
-		var mask uint64
-		var rem uint32
-		if pt&0x1 != 0 {
-			mask = ^uint64(0)
-			rem = 0xffff
-		}
+		mask := -uint64(pt & 1)
 		acc ^= reg & mask
 		reg >>= 1
 
-		acctmp ^= uint16(regtmp & rem)
+		acctmp ^= uint16(regtmp) & uint16(mask)
 		regtmp >>= 1
 
 		pt >>= 1
 	}
-	// Believe it or not, assinging to reg1 and acc1 causes us to
-	// exceed the inlining budget.
 	return reg | uint64(ms)<<48, acc ^ uint64(acctmp)<<48
 }
 
 func (s *state) accumulate8(ms, pt uint8) {
-	acctmp := uint8(0)
+	var acctmp uint8
 	regtmp := uint16(ms) << 8
 	reg := s.reg
 	acc := s.acc
 
 	for i := 0; i < 8; i++ {
-		var mask uint64
-		var rem uint32
-		if pt&0x1 != 0 {
-			mask = ^uint64(0)
-			rem = 0xff
-		}
+		mask := -uint64(pt & 1)
 		acc ^= reg & mask
 		reg >>= 1
 
-		acctmp ^= uint8(uint32(regtmp) & rem)
+		acctmp ^= uint8(regtmp) & uint8(mask)
 		regtmp >>= 1
 
 		pt >>= 1
