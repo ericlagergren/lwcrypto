@@ -132,7 +132,7 @@ func benchmarkKeystream(b *testing.B, fn func(*state) uint32) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		Sink32 = next(&g)
+		Sink32 = fn(&g)
 	}
 }
 
