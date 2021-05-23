@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 
@@ -251,7 +250,7 @@ func declareAccumulate() {
 
 	reg := Load(Param("reg"), GP64())
 	acc := Load(Param("acc"), GP64())
-	pt := Load(Param("pt"), GP16()).(GPVirtual)
+	pt := Load(Param("pt"), GP32())
 	ms := Load(Param("ms"), GP64()).(GPVirtual)
 
 	Comment("var acctmp uint16")
@@ -263,42 +262,28 @@ func declareAccumulate() {
 	MOVWLZX(ms.As16(), regtmp)
 	shll(16, regtmp)
 
-	Comment("Zero register")
-	zero := GP64()
-	XORQ(zero, zero)
-
+	mask := GP64()
+	tmp := GP64()
 	for i := 0; i < 16; i++ {
-		Comment(
-			"mask, rem := ^uint64(0), uint64(0xffff)",
-			"if pt&0x1 == 0 { mask, rem = 0, 0 }",
-		)
-		mask := GP64()
-		rem := GP32()
-		MOVQ(I32(-1), mask)
-		MOVL(U32(0xffff), rem)
-
-		switch s := 1 << i; {
-		case s < math.MaxUint8:
-			TESTB(U8(s), pt.As8())
-		case s < math.MaxUint16:
-			TESTW(U16(s), pt)
-		default:
-			panic("unreachable")
-		}
-
-		CMOVQEQ(zero, mask)
-		CMOVLEQ(zero.As32(), rem)
+		Comment("mask := -uint64(pt & 1)")
+		MOVL(pt, mask.As32())
+		ANDL(U8(1), mask.As32())
+		NEGQ(mask)
 
 		Comment("acc ^= reg & mask")
-		ANDQ(reg, mask) // clobber mask
-		XORQ(mask, acc)
+		MOVQ(reg, tmp)
+		ANDQ(mask, tmp)
+		XORQ(tmp, acc)
 
-		Comment("acctmp ^= uint16(regtmp & rem)")
-		ANDL(regtmp, rem) // clobber rem
-		XORW(rem.As16(), acctmp.As16())
+		Comment("acctmp ^= uint16(regtmp) & uint16(mask)")
+		ANDW(regtmp.As16(), mask.As16()) // clobber mask
+		XORW(mask.As16(), acctmp.As16())
 
 		Comment("reg >>= 1")
 		shrq(1, reg)
+
+		Comment("pt >>= 1")
+		shrl(1, pt)
 
 		// Last iteration does not matter.
 		if i < 15 {
@@ -307,12 +292,10 @@ func declareAccumulate() {
 		}
 	}
 
-	Comment("pt >>= 16")                   // 0
 	Comment("reg |= uint64(ms) << 48")     // 1
 	Comment("acc ^= uint64(acctmp) << 48") // 2
 
 	shlq(48, ms)      // 1
-	SHRW(U8(16), pt)  // 0
 	shlq(48, acctmp)  // 2
 	ORQ(ms, reg)      // 1
 	XORQ(acctmp, acc) // 2
@@ -334,6 +317,7 @@ func addr(c Component) Mem {
 }
 
 func shrq(x uint8, op Op) { SHRQ(U8(x), op) }
+func shrl(x uint8, op Op) { SHRL(U8(x), op) }
 func shlq(x uint8, op Op) { SHLQ(U8(x), op) }
 func shll(x uint8, op Op) { SHLL(U8(x), op) }
 

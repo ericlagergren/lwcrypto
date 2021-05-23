@@ -300,11 +300,10 @@ TEXT ·next(SB), NOSPLIT, $0-12
 	RET
 
 // func accumulate(reg uint64, acc uint64, ms uint16, pt uint16) (reg1 uint64, acc1 uint64)
-// Requires: CMOV
 TEXT ·accumulate(SB), NOSPLIT, $0-40
 	MOVQ    reg+0(FP), AX
 	MOVQ    acc+8(FP), CX
-	MOVW    pt+18(FP), DX
+	MOVWLZX pt+18(FP), DX
 	MOVWQZX ms+16(FP), BX
 
 	// var acctmp uint16
@@ -314,363 +313,374 @@ TEXT ·accumulate(SB), NOSPLIT, $0-40
 	MOVWLZX BX, DI
 	SHLL    $0x10, DI
 
-	// Zero register
-	XORQ R8, R8
-
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x01, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x02, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x04, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x08, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x10, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x20, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x40, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTB   $0x80, DL
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x0100, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x0200, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x0400, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x0800, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x1000, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x2000, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x4000, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
+
+	// pt >>= 1
+	SHRL $0x01, DX
 
 	// regtmp >>= 1
 	SHRL $0x01, DI
 
-	// mask, rem := ^uint64(0), uint64(0xffff)
-	// if pt&0x1 == 0 { mask, rem = 0, 0 }
-	MOVQ    $-1, R9
-	MOVL    $0x0000ffff, R10
-	TESTW   $0x8000, DX
-	CMOVQEQ R8, R9
-	CMOVLEQ R8, R10
+	// mask := -uint64(pt & 1)
+	MOVL DX, R8
+	ANDL $0x01, R8
+	NEGQ R8
 
 	// acc ^= reg & mask
-	ANDQ AX, R9
+	MOVQ AX, R9
+	ANDQ R8, R9
 	XORQ R9, CX
 
-	// acctmp ^= uint16(regtmp & rem)
-	ANDL DI, R10
-	XORW R10, SI
+	// acctmp ^= uint16(regtmp) & uint16(mask)
+	ANDW DI, R8
+	XORW R8, SI
 
 	// reg >>= 1
 	SHRQ $0x01, AX
 
-	// pt >>= 16
+	// pt >>= 1
+	SHRL $0x01, DX
+
 	// reg |= uint64(ms) << 48
 	// acc ^= uint64(acctmp) << 48
 	SHLQ $0x30, BX
-	SHRW $0x10, DX
 	SHLQ $0x30, SI
 	ORQ  BX, AX
 	XORQ SI, CX
