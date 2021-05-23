@@ -474,23 +474,19 @@ func nextGeneric(s *state) uint32 {
 
 func accumulateGeneric(reg, acc uint64, ms, pt uint16) (reg1, acc1 uint64) {
 	// accumulateGeneric has this signature because it allows the
-	// function to be inlined. However, even though it's inlined
-	// it's only ever called via accumulate, which can't be
-	// inlined because the combined inlining costs exceed the
-	// allowed budget.
-	var acctmp uint16
+	// function to be inlined.
+	var acctmp uint64
 	regtmp := uint32(ms) << 16
 	for i := 0; i < 16; i++ {
-		mask := -uint64(pt & 1)
-		acc ^= reg & mask
+		acc ^= reg & -uint64(pt&1)
 		reg >>= 1
 
-		acctmp ^= uint16(regtmp) & uint16(mask)
+		acctmp ^= uint64(regtmp) & -uint64(pt&1)
 		regtmp >>= 1
 
 		pt >>= 1
 	}
-	return reg | uint64(ms)<<48, acc ^ uint64(acctmp)<<48
+	return reg | uint64(ms)<<48, acc ^ acctmp<<48
 }
 
 func (s *state) accumulate8(ms, pt uint8) {
