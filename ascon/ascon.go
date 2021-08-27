@@ -21,18 +21,18 @@ var errOpen = errors.New("ascon: message authentication failed")
 
 const (
 	// BlockSize128a is the size in bytes of an ASCON-128a block.
-	BlockSize128a = 128 / 8
+	BlockSize128a = 16
 	// BlockSize128 is the size in bytes of an ASCON-128 block.
-	BlockSize128 = 64 / 8
+	BlockSize128 = 8
 	// KeySize is the size in bytes of ASCON-128 and ASCON-128a
 	// keys.
-	KeySize = 128 / 8
+	KeySize = 16
 	// NonceSize is the size in bytes of ASCON-128 and ASCON-128a
 	// nonces.
-	NonceSize = 128 / 8
+	NonceSize = 16
 	// TagSize is the size in bytes of ASCON-128 and ASCON-128a
 	// authenticators.
-	TagSize = 128 / 8
+	TagSize = 16
 )
 
 type ascon struct {
