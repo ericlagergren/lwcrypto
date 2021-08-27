@@ -1,4 +1,5 @@
-// +build !amd64 !gc purego
+//go:build !(amd64 || arm64 || gc) || purego
+// +build !amd64,!arm64,!gc purego
 
 package ascon
 

@@ -15,8 +15,10 @@ import (
 	"testing/quick"
 )
 
+var stateType = reflect.TypeOf([5]uint64{})
+
 func randState(rng *rand.Rand) state {
-	v, ok := quick.Value(reflect.TypeOf([5]uint64{}), rng)
+	v, ok := quick.Value(stateType, rng)
 	if !ok {
 		panic("got false")
 	}
