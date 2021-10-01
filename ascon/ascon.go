@@ -225,11 +225,10 @@ func (s *state) finalize128a(k0, k1 uint64) {
 
 func (s *state) additionalData128a(ad []byte) {
 	if len(ad) > 0 {
-		for len(ad) >= BlockSize128a {
-			s.x0 ^= binary.BigEndian.Uint64(ad[0:8])
-			s.x1 ^= binary.BigEndian.Uint64(ad[8:16])
-			p8(s)
-			ad = ad[BlockSize128a:]
+		n := len(ad) &^ (BlockSize128a - 1)
+		if n > 0 {
+			additionalData128a(s, ad[:n])
+			ad = ad[n:]
 		}
 		if len(ad) >= 8 {
 			s.x0 ^= binary.BigEndian.Uint64(ad[0:8])
@@ -245,14 +244,11 @@ func (s *state) additionalData128a(ad []byte) {
 }
 
 func (s *state) encrypt128a(dst, src []byte) {
-	for len(src) >= BlockSize128a {
-		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
-		s.x1 ^= binary.BigEndian.Uint64(src[8:16])
-		binary.BigEndian.PutUint64(dst[0:8], s.x0)
-		binary.BigEndian.PutUint64(dst[8:16], s.x1)
-		p8(s)
-		src = src[BlockSize128a:]
-		dst = dst[BlockSize128a:]
+	n := len(src) &^ (BlockSize128a - 1)
+	if n > 0 {
+		encryptBlocks128a(s, dst[:n], src[:n])
+		src = src[n:]
+		dst = dst[n:]
 	}
 	if len(src) >= 8 {
 		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
@@ -268,16 +264,11 @@ func (s *state) encrypt128a(dst, src []byte) {
 }
 
 func (s *state) decrypt128a(dst, src []byte) {
-	for len(src) >= BlockSize128a {
-		c0 := binary.BigEndian.Uint64(src[0:8])
-		c1 := binary.BigEndian.Uint64(src[8:16])
-		binary.BigEndian.PutUint64(dst[0:8], s.x0^c0)
-		binary.BigEndian.PutUint64(dst[8:16], s.x1^c1)
-		s.x0 = c0
-		s.x1 = c1
-		p8(s)
-		src = src[BlockSize128a:]
-		dst = dst[BlockSize128a:]
+	n := len(src) &^ (BlockSize128a - 1)
+	if n > 0 {
+		decryptBlocks128a(s, dst[:n], src[:n])
+		src = src[n:]
+		dst = dst[n:]
 	}
 	if len(src) >= 8 {
 		c0 := binary.BigEndian.Uint64(src[0:8])
@@ -355,83 +346,6 @@ func (s *state) tag(dst []byte) {
 
 func pad(n int) uint64 {
 	return 0x80 << (56 - 8*n)
-}
-
-func p12Generic(s *state) {
-	round(s, 0xf0)
-	round(s, 0xe1)
-	round(s, 0xd2)
-	round(s, 0xc3)
-	round(s, 0xb4)
-	round(s, 0xa5)
-	round(s, 0x96)
-	round(s, 0x87)
-	round(s, 0x78)
-	round(s, 0x69)
-	round(s, 0x5a)
-	round(s, 0x4b)
-}
-
-func p8Generic(s *state) {
-	round(s, 0xb4)
-	round(s, 0xa5)
-	round(s, 0x96)
-	round(s, 0x87)
-	round(s, 0x78)
-	round(s, 0x69)
-	round(s, 0x5a)
-	round(s, 0x4b)
-}
-
-func p6Generic(s *state) {
-	round(s, 0x96)
-	round(s, 0x87)
-	round(s, 0x78)
-	round(s, 0x69)
-	round(s, 0x5a)
-	round(s, 0x4b)
-}
-
-func roundGeneric(s *state, C uint64) {
-	s0 := s.x0
-	s1 := s.x1
-	s2 := s.x2
-	s3 := s.x3
-	s4 := s.x4
-
-	// Round constant
-	s2 ^= C
-
-	// Substitution
-	s0 ^= s4
-	s4 ^= s3
-	s2 ^= s1
-
-	// Keccak S-box
-	t0 := s0 ^ (^s1 & s2)
-	t1 := s1 ^ (^s2 & s3)
-	t2 := s2 ^ (^s3 & s4)
-	t3 := s3 ^ (^s4 & s0)
-	t4 := s4 ^ (^s0 & s1)
-
-	// Substitution
-	t1 ^= t0
-	t0 ^= t4
-	t3 ^= t2
-	t2 = ^t2
-
-	// Linear diffusion
-	//
-	// x0 ← Σ0(x0) = x0 ⊕ (x0 ≫ 19) ⊕ (x0 ≫ 28)
-	s.x0 = t0 ^ rotr(t0, 19) ^ rotr(t0, 28)
-	// x1 ← Σ1(x1) = x1 ⊕ (x1 ≫ 61) ⊕ (x1 ≫ 39)
-	s.x1 = t1 ^ rotr(t1, 61) ^ rotr(t1, 39)
-	// x2 ← Σ2(x2) = x2 ⊕ (x2 ≫ 1) ⊕ (x2 ≫ 6)
-	s.x2 = t2 ^ rotr(t2, 1) ^ rotr(t2, 6)
-	// x3 ← Σ3(x3) = x3 ⊕ (x3 ≫ 10) ⊕ (x3 ≫ 17)
-	s.x3 = t3 ^ rotr(t3, 10) ^ rotr(t3, 17)
-	// x4 ← Σ4(x4) = x4 ⊕ (x4 ≫ 7) ⊕ (x4 ≫ 41)
-	s.x4 = t4 ^ rotr(t4, 7) ^ rotr(t4, 41)
 }
 
 func rotr(x uint64, n int) uint64 {

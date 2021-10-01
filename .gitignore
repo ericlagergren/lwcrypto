@@ -15,3 +15,7 @@
 # vendor/
 
 elephant/
+
+*.txt
+
+ascon_simd_arm64.s
