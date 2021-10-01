@@ -2,6 +2,7 @@ package main
 
 import (
 	. "github.com/mmcloughlin/avo/build"
+	"github.com/mmcloughlin/avo/ir"
 	. "github.com/mmcloughlin/avo/operand"
 	. "github.com/mmcloughlin/avo/reg"
 )
@@ -14,8 +15,41 @@ func main() {
 
 	declarePermute()
 	declareRound()
+	declareAdditionalData128a()
+	declareEncryptBlocks128a()
+	declareDecryptBlocks128a()
 
 	Generate()
+}
+
+func declareAdditionalData128a() {
+	TEXT("additionalData128a", NOSPLIT, "func(s *state, ad []byte)")
+	Pragma("noescape")
+	Instruction(&ir.Instruction{
+		Opcode:   "JMP",
+		Operands: []Op{LabelRef("·additionalData128aGeneric(SB)")},
+	})
+	RET()
+}
+
+func declareEncryptBlocks128a() {
+	TEXT("encryptBlocks128a", NOSPLIT, "func(s *state, dst, src []byte)")
+	Pragma("noescape")
+	Instruction(&ir.Instruction{
+		Opcode:   "JMP",
+		Operands: []Op{LabelRef("·encryptBlocks128aGeneric(SB)")},
+	})
+	RET()
+}
+
+func declareDecryptBlocks128a() {
+	TEXT("decryptBlocks128a", NOSPLIT, "func(s *state, dst, src []byte)")
+	Pragma("noescape")
+	Instruction(&ir.Instruction{
+		Opcode:   "JMP",
+		Operands: []Op{LabelRef("·decryptBlocks128aGeneric(SB)")},
+	})
+	RET()
 }
 
 func declarePermute() {

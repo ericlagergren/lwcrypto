@@ -2089,3 +2089,18 @@ TEXT ·round(SB), NOSPLIT, $0-16
 	MOVQ SI, 24(AX)
 	MOVQ DI, 32(AX)
 	RET
+
+// func additionalData128a(s *state, ad []byte)
+TEXT ·additionalData128a(SB), NOSPLIT, $0-32
+	JMP ·additionalData128aGeneric(SB)
+	RET
+
+// func encryptBlocks128a(s *state, dst []byte, src []byte)
+TEXT ·encryptBlocks128a(SB), NOSPLIT, $0-56
+	JMP ·encryptBlocks128aGeneric(SB)
+	RET
+
+// func decryptBlocks128a(s *state, dst []byte, src []byte)
+TEXT ·decryptBlocks128a(SB), NOSPLIT, $0-56
+	JMP ·decryptBlocks128aGeneric(SB)
+	RET
