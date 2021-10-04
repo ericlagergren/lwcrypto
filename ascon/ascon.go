@@ -45,9 +45,7 @@ var _ cipher.AEAD = (*ascon)(nil)
 // New128 creates a 128-bit ASCON-128 AEAD.
 //
 // ASCON-128 provides lower throughput but increased robustness
-// compared to ASCON-128a. In particular, ASCON-128 is protected
-// against forgeries and key recovery attacks with a complexity
-// of 2^96.
+// against partial or full state recovery compared to ASCON-128a.
 //
 // Each unique key can encrypt a maximum 2^68 bytes (i.e., 2^64
 // plaintext and associated data blocks). Nonces must never be
@@ -72,9 +70,7 @@ func New128(key []byte) (cipher.AEAD, error) {
 // New128a creates a 128-bit ASCON-128a AEAD.
 //
 // ASCON-128a provides higher throughput but reduced robustness
-// compared to ASCON-128. In particular, ASCON-128a is protected
-// against forgeries and key recovery attacks with a complexity
-// of 2^128.
+// against partial or full state recovery compared to ASCON-128.
 //
 // Each unique key can encrypt a maximum 2^68 bytes (i.e., 2^64
 // plaintext and associated data blocks). Nonces must never be
