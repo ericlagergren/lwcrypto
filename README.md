@@ -23,6 +23,8 @@ following example is not a substitute for reading the package's
 documentation.
 
 ```go
+package main
+
 import (
 	"crypto/rand"
 
