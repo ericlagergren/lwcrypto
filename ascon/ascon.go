@@ -10,12 +10,13 @@ import (
 	"crypto/cipher"
 	"encoding/binary"
 	"errors"
-	"math/bits"
 	"runtime"
 	"strconv"
 
 	"github.com/ericlagergren/lwcrypto/internal/subtle"
 )
+
+//go:generate go run github.com/ericlagergren/lwcrypto/ascon/internal/cmd/pgen
 
 var errOpen = errors.New("ascon: message authentication failed")
 
@@ -307,7 +308,7 @@ func (s *state) additionalData128(ad []byte) {
 }
 
 func (s *state) encrypt128(dst, src []byte) {
-	for len(src) >= BlockSize128 {
+	for len(src) >= BlockSize128 && len(dst) >= BlockSize128 {
 		s.x0 ^= binary.BigEndian.Uint64(src[0:8])
 		binary.BigEndian.PutUint64(dst[0:8], s.x0)
 		p6(s)
@@ -320,7 +321,7 @@ func (s *state) encrypt128(dst, src []byte) {
 }
 
 func (s *state) decrypt128(dst, src []byte) {
-	for len(src) >= BlockSize128 {
+	for len(src) >= BlockSize128 && len(dst) >= BlockSize128 {
 		c := binary.BigEndian.Uint64(src[0:8])
 		binary.BigEndian.PutUint64(dst[0:8], s.x0^c)
 		s.x0 = c
@@ -342,10 +343,6 @@ func (s *state) tag(dst []byte) {
 
 func pad(n int) uint64 {
 	return 0x80 << (56 - 8*n)
-}
-
-func rotr(x uint64, n int) uint64 {
-	return bits.RotateLeft64(x, -n)
 }
 
 func be64n(b []byte) uint64 {
