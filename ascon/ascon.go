@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/ericlagergren/lwcrypto/internal/subtle"
+	"github.com/ericlagergren/subtle"
 )
 
 //go:generate go run github.com/ericlagergren/lwcrypto/ascon/internal/cmd/pgen

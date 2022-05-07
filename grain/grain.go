@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ericlagergren/lwcrypto/internal/subtle"
+	"github.com/ericlagergren/subtle"
 )
 
 var errOpen = errors.New("grain: message authentication failed")
