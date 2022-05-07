@@ -16,7 +16,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ericlagergren/lwcrypto/internal/subtle"
+	"github.com/ericlagergren/subtle"
 )
 
 type aead struct {
